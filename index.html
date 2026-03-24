@@ -1,5 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CardioSense</title>
+</head>
+<body>
+
+<h2>CardioSense Test UI</h2>
+
+<input id="age" placeholder="Age"><br><br>
+<input id="gender" placeholder="Gender (1/2)"><br><br>
+<input id="height" placeholder="Height"><br><br>
+<input id="weight" placeholder="Weight"><br><br>
+<input id="ap_hi" placeholder="Systolic BP"><br><br>
+<input id="ap_lo" placeholder="Diastolic BP"><br><br>
+<input id="cholesterol" placeholder="Cholesterol"><br><br>
+<input id="gluc" placeholder="Glucose"><br><br>
+<input id="smoke" placeholder="Smoke (0/1)"><br><br>
+<input id="alco" placeholder="Alcohol (0/1)"><br><br>
+<input id="active" placeholder="Active (0/1)"><br><br>
+
+<button onclick="runAnalysis()">Predict</button>
+
+<h3 id="output"></h3>
+
 <script>
 async function runAnalysis() {
+
     const vals = {
         age: parseFloat(document.getElementById('age').value),
         gender: parseFloat(document.getElementById('gender').value),
@@ -27,19 +54,24 @@ async function runAnalysis() {
 
         console.log("FULL RESPONSE:", data);
 
-        // 🔴 agar backend error hai
         if (data.error) {
-            alert("Backend Error: " + data.error);
+            document.getElementById("output").innerText =
+                "Backend Error: " + data.error;
             return;
         }
 
-        // ✅ output show
         document.getElementById("output").innerText =
-            `Prediction: ${data.prediction}, Probability: ${data.probability}, Risk: ${data.risk}`;
+            "Prediction: " + data.prediction +
+            " | Probability: " + data.probability +
+            " | Risk: " + data.risk;
 
     } catch (err) {
-        console.log("FETCH ERROR:", err);
-        alert("Error connecting to backend");
+        console.log(err);
+        document.getElementById("output").innerText =
+            "Error connecting to backend";
     }
 }
 </script>
+
+</body>
+</html>
