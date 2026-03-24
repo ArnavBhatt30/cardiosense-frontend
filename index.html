@@ -1,6 +1,4 @@
 <script>
-const API_URL = 'https://cardiosense-backend.onrender.com/predict';
-
 async function runAnalysis() {
     const vals = {
         age: parseFloat(document.getElementById('age').value),
@@ -17,31 +15,31 @@ async function runAnalysis() {
     };
 
     try {
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("https://cardiosense-backend.onrender.com/predict", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify(vals)
         });
 
         const data = await res.json();
 
-        // 🔥 DEBUG LINE
         console.log("FULL RESPONSE:", data);
 
-        // ❗ agar error aaye to show kar
+        // 🔴 agar backend error hai
         if (data.error) {
-            document.getElementById("result").innerText =
-                "Backend Error: " + data.error;
+            alert("Backend Error: " + data.error);
             return;
         }
 
-        document.getElementById("result").innerText =
+        // ✅ output show
+        document.getElementById("output").innerText =
             `Prediction: ${data.prediction}, Probability: ${data.probability}, Risk: ${data.risk}`;
 
     } catch (err) {
         console.log("FETCH ERROR:", err);
-        document.getElementById("result").innerText =
-            "Error connecting to backend";
+        alert("Error connecting to backend");
     }
 }
 </script>
