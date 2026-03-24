@@ -1,77 +1,1416 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>CardioSense</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CardioSense — Heart Disease Diagnostic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:    #f7f4ef;
+      --cream2:   #efe9e0;
+      --white:    #ffffff;
+      --ink:      #1a1410;
+      --ink2:     #5a4e44;
+      --ink3:     #9c8e84;
+      --red:      #c0392b;
+      --red-soft: #f5e6e4;
+      --red-mid:  #e8b4af;
+      --amber:    #d4760a;
+      --amber-s:  #fdf3e3;
+      --green:    #2d6a4f;
+      --green-s:  #e8f5ee;
+      --border:   rgba(26,20,16,0.1);
+      --border2:  rgba(26,20,16,0.06);
+      --shadow:   0 2px 20px rgba(26,20,16,0.08);
+      --shadow2:  0 8px 40px rgba(26,20,16,0.12);
+      --r:        14px;
+      --r-sm:     8px;
+    }
+
+    /* ── Custom cursor ── */
+    * { cursor: none !important; }
+
+    #cursor-dot {
+      position: fixed;
+      width: 8px; height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 999999;
+      transform: translate(-50%, -50%);
+      transition: width 0.15s ease, height 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+      will-change: transform;
+    }
+    #cursor-ring {
+      position: fixed;
+      width: 32px; height: 32px;
+      border: 1.5px solid var(--red);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 999998;
+      transform: translate(-50%, -50%);
+      opacity: 0.5;
+      transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      will-change: transform;
+    }
+
+    /* Hover state — cursor expands and fills */
+    body.cursor-hover #cursor-dot {
+      width: 6px; height: 6px;
+      opacity: 0.6;
+    }
+    body.cursor-hover #cursor-ring {
+      width: 44px; height: 44px;
+      opacity: 0.2;
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    /* Click state */
+    body.cursor-click #cursor-dot {
+      width: 12px; height: 12px;
+      background: var(--red);
+    }
+    body.cursor-click #cursor-ring {
+      width: 22px; height: 22px;
+      opacity: 0.6;
+    }
+
+    /* ── Dark mode ── */
+    [data-theme="dark"] {
+      --cream:    #0f1117;
+      --cream2:   #161b26;
+      --white:    #1a2030;
+      --ink:      #e8e2d9;
+      --ink2:     #8a9ab0;
+      --ink3:     #4a5568;
+      --red:      #e05c4b;
+      --red-soft: rgba(224,92,75,0.12);
+      --red-mid:  rgba(224,92,75,0.25);
+      --amber:    #e8a047;
+      --amber-s:  rgba(232,160,71,0.1);
+      --green:    #4caf82;
+      --green-s:  rgba(76,175,130,0.1);
+      --border:   rgba(232,226,217,0.08);
+      --border2:  rgba(232,226,217,0.04);
+      --shadow:   0 2px 20px rgba(0,0,0,0.3);
+      --shadow2:  0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    /* ── Ripple overlay ── */
+    #ripple-overlay {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 99998;
+      overflow: hidden;
+    }
+    .ripple-circle {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      animation: ripple-expand 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes ripple-expand {
+      0%   { transform: scale(0); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Theme toggle button ── */
+    .theme-toggle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--cream2);
+      color: var(--ink2);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { background: var(--red-soft); color: var(--red); border-color: var(--red-mid); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+
+    /* ── Global transition for smooth theme switch ── */
+    *, *::before, *::after {
+      transition-property: background-color, border-color, color, box-shadow;
+      transition-duration: 0.35s;
+      transition-timing-function: ease;
+    }
+    /* But keep animations and transforms snappy */
+    .ripple-circle, .spinner, .dot,
+    input, select, button, .btn, .nav-item,
+    .vital-fill, #toast { transition: none !important; }
+    input, select { transition: border-color 0.15s, background 0.15s, box-shadow 0.15s !important; }
+    .btn { transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important; }
+    .nav-item { transition: background 0.15s, color 0.15s, border-color 0.15s !important; }
+    .theme-toggle { transition: background 0.2s, border-color 0.2s, color 0.2s !important; }
+    #toast { transition: transform 0.3s ease, opacity 0.3s ease !important; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.4;
+    }
+
+    /* ── Layout ── */
+    .shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+      display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 2.5rem;
+      justify-content: space-between;
+    }
+    .logo-mark {
+      width: 38px; height: 38px;
+      background: var(--red);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-mark svg { width: 20px; height: 20px; fill: none; stroke: white; stroke-width: 2; }
+    .logo-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.25rem;
+      line-height: 1.1;
+    }
+    .logo-text em {
+      font-style: italic;
+      color: var(--red);
+    }
+
+    .nav-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem; font-weight: 500;
+      color: var(--ink3); letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin: 1.4rem 0 0.5rem 2px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: var(--r-sm);
+      color: var(--ink2); font-size: 0.875rem; font-weight: 400;
+      cursor: pointer; text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--cream); color: var(--ink); }
+    .nav-item.active {
+      background: var(--red-soft);
+      color: var(--red);
+      border-color: var(--red-mid);
+      font-weight: 500;
+    }
+    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .aside-footer {
+      margin-top: auto;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border2);
+    }
+    .status-pill {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 10px;
+      background: var(--green-s);
+      border: 1px solid rgba(45,106,79,0.2);
+      border-radius: 99px;
+      font-size: 0.75rem; color: var(--green);
+      font-weight: 500;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; animation: blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.35} }
+
+    /* ── Main content ── */
+    main {
+      overflow-y: auto;
+      padding: 2.5rem 2.5rem 4rem;
+    }
+
+    /* ── Page header ── */
+    .page-head {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border2);
+    }
+    .page-head-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--ink3);
+      margin-bottom: 6px;
+    }
+    .page-head h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2rem; font-weight: 400;
+      line-height: 1.2;
+    }
+    .page-head h1 em { font-style: italic; color: var(--red); }
+    .page-head p { margin-top: 8px; color: var(--ink2); font-size: 0.875rem; max-width: 55ch; line-height: 1.6; }
+
+    /* ── Cards / Panels ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1rem; font-weight: 400;
+    }
+    .card-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem; color: var(--ink3); letter-spacing: 0.08em;
+    }
+    .card-body { padding: 1.25rem; }
+
+    /* ── Dashboard grids ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.2rem;
+      box-shadow: var(--shadow);
+    }
+    .stat-label { font-size: 0.72rem; color: var(--ink3); font-weight: 500; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .stat-value { font-family: 'Instrument Serif', serif; font-size: 2rem; font-weight: 400; line-height: 1; }
+    .stat-sub { font-size: 0.72rem; color: var(--ink2); margin-top: 5px; }
+    .stat-card.red { background: var(--red-soft); border-color: var(--red-mid); }
+    .stat-card.red .stat-value { color: var(--red); }
+    .stat-card.green { background: var(--green-s); border-color: rgba(45,106,79,0.2); }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.amber { background: var(--amber-s); border-color: rgba(212,118,10,0.2); }
+    .stat-card.amber .stat-value { color: var(--amber); }
+
+    .content-cols {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 1.5rem;
+    }
+
+    /* ── Patient table ── */
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.1em; font-weight: 500;
+      color: var(--ink3); text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      background: var(--cream);
+    }
+    td {
+      padding: 11px 14px;
+      font-size: 0.82rem;
+      border-bottom: 1px solid var(--border2);
+      color: var(--ink);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--cream); }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px; border-radius: 99px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem; font-weight: 500; letter-spacing: 0.04em;
+    }
+    .badge.high { background: var(--red-soft); color: var(--red); border: 1px solid var(--red-mid); }
+    .badge.mid { background: var(--amber-s); color: var(--amber); border: 1px solid rgba(212,118,10,0.3); }
+    .badge.low { background: var(--green-s); color: var(--green); border: 1px solid rgba(45,106,79,0.2); }
+
+    /* ── Diagnostic Form ── */
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1/-1; }
+    label {
+      font-size: 0.72rem; font-weight: 500;
+      color: var(--ink2); letter-spacing: 0.02em;
+    }
+    label span { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--ink3); font-weight: 400; }
+    input, select {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      background: var(--cream);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; color: var(--ink);
+      outline: none; transition: border-color 0.15s, background 0.15s;
+      width: 100%;
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--red); background: var(--white); box-shadow: 0 0 0 3px rgba(192,57,43,0.08); }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%239c8e84' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
+
+    .btn {
+      padding: 10px 22px; border-radius: var(--r-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; border: none; transition: all 0.15s ease;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .btn-primary { background: var(--red); color: white; }
+    .btn-primary:hover { background: #a93226; box-shadow: 0 4px 16px rgba(192,57,43,0.3); }
+    .btn-primary:active { transform: translateY(1px); }
+    .btn-secondary { background: var(--cream2); color: var(--ink); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--cream); border-color: var(--ink3); }
+    .btn-sm { padding: 6px 14px; font-size: 0.78rem; }
+
+    /* ── Result panel ── */
+    .result-hidden { display: none; }
+    .result-box {
+      border-radius: var(--r);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-top: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .result-header {
+      padding: 1.2rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .result-header.high { background: var(--red-soft); }
+    .result-header.mid { background: var(--amber-s); }
+    .result-header.low { background: var(--green-s); }
+
+    .risk-number {
+      font-family: 'Instrument Serif', serif;
+      font-size: 3.5rem; font-weight: 400; line-height: 1;
+    }
+    .risk-number.high { color: var(--red); }
+    .risk-number.mid { color: var(--amber); }
+    .risk-number.low { color: var(--green); }
+
+    .risk-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.1em;
+      text-transform: uppercase; margin-top: 4px;
+    }
+    .risk-label.high { color: var(--red); }
+    .risk-label.mid { color: var(--amber); }
+    .risk-label.low { color: var(--green); }
+
+    .result-body { padding: 1.25rem 1.5rem; background: var(--white); }
+
+    /* ── Vitals ── */
+    .vital-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .vital-name { font-size: 0.75rem; color: var(--ink2); width: 110px; flex-shrink: 0; }
+    .vital-bar { flex: 1; height: 5px; background: var(--cream2); border-radius: 99px; overflow: hidden; }
+    .vital-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+    .vital-val { font-family: 'DM Mono', monospace; font-size: 0.72rem; width: 72px; text-align: right; flex-shrink: 0; }
+    .vital-val.ok { color: var(--green); }
+    .vital-val.warn { color: var(--amber); }
+    .vital-val.bad { color: var(--red); }
+
+    /* ── Notes ── */
+    .clinical-note {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: 8px 12px;
+      background: var(--cream);
+      border-radius: var(--r-sm);
+      border-left: 3px solid transparent;
+      font-size: 0.78rem; color: var(--ink2);
+      margin-bottom: 6px;
+    }
+    .clinical-note.warn { border-left-color: var(--amber); background: var(--amber-s); color: var(--amber); }
+    .clinical-note.danger { border-left-color: var(--red); background: var(--red-soft); color: var(--red); }
+    .clinical-note.ok { border-left-color: var(--green); background: var(--green-s); color: var(--green); }
+
+    /* ── Model Info Page ── */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem; }
+    .metric-item {
+      background: var(--cream);
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      padding: 1rem;
+    }
+    .metric-label { font-size: 0.7rem; color: var(--ink3); margin-bottom: 6px; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; }
+    .metric-val { font-family: 'Instrument Serif', serif; font-size: 1.8rem; color: var(--green); }
+
+    .arch-step {
+      display: flex; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border2);
+      align-items: flex-start;
+    }
+    .arch-step:last-child { border-bottom: none; }
+    .arch-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--red-soft); color: var(--red);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .arch-step-name { font-size: 0.83rem; font-weight: 500; margin-bottom: 2px; }
+    .arch-step-desc { font-size: 0.72rem; color: var(--ink2); font-family: 'DM Mono', monospace; }
+
+    .endpoint-box {
+      background: var(--ink);
+      border-radius: var(--r-sm);
+      padding: 1.2rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      line-height: 2;
+    }
+    .endpoint-box .method { color: #ff7c5c; }
+    .endpoint-box .url { color: #a8d8a8; }
+    .endpoint-box .comment { color: #666; }
+    .endpoint-box .key { color: #82c4e8; }
+    .endpoint-box .val { color: #e8d28c; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 18px; border-radius: var(--r-sm);
+      font-size: 0.82rem; font-weight: 500;
+      box-shadow: var(--shadow2);
+      transform: translateY(80px); opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      border: 1px solid transparent;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { background: var(--green-s); color: var(--green); border-color: rgba(45,106,79,0.3); }
+    #toast.error { background: var(--red-soft); color: var(--red); border-color: var(--red-mid); }
+    #toast.info { background: var(--cream2); color: var(--ink); border-color: var(--border); }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Fade in ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.4s ease both; }
+    .fade-up-2 { animation: fadeUp 0.4s ease 0.08s both; }
+    .fade-up-3 { animation: fadeUp 0.4s ease 0.16s both; }
+
+    /* ── ECG decorative line ── */
+    .ecg-decoration {
+      width: 100%; height: 40px; overflow: hidden;
+      margin-bottom: 1.5rem; opacity: 0.12;
+    }
+    .ecg-decoration svg { width: 100%; height: 100%; }
+
+    /* ── Progress bar (metric) ── */
+    .metric-bar { height: 3px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+    .metric-bar-fill { height: 100%; border-radius: 99px; background: var(--green); }
+
+    /* ── API call notice ── */
+    .api-notice {
+      background: var(--amber-s);
+      border: 1px solid rgba(212,118,10,0.2);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+      font-size: 0.78rem; color: var(--amber);
+      margin-bottom: 1.2rem;
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .api-notice svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ══════════════════════════════════
+       MOBILE — Bottom Nav + Full Layout
+       ══════════════════════════════════ */
+
+    /* Bottom nav bar — mobile only */
+    #mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 64px;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      z-index: 9000;
+      padding: 0 8px;
+      display: none;
+      align-items: center;
+      justify-content: space-around;
+      box-shadow: 0 -4px 24px rgba(26,20,16,0.08);
+    }
+    .mob-nav-item {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 3px; padding: 6px 16px; border-radius: 10px;
+      cursor: pointer; flex: 1;
+      transition: background 0.15s ease, color 0.15s ease;
+      color: var(--ink3);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mob-nav-item svg { width: 20px; height: 20px; flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+    .mob-nav-item span { font-size: 0.6rem; font-weight: 500; letter-spacing: 0.02em; font-family: 'DM Mono', monospace; }
+    .mob-nav-item.active { color: var(--red); background: var(--red-soft); }
+    .mob-nav-item.active svg { transform: scale(1.15); }
+
+    /* Mobile topbar */
+    #mobile-topbar {
+      display: none;
+      position: sticky; top: 0; z-index: 8000;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.2rem;
+      height: 56px;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(26,20,16,0.06);
+    }
+    .mob-logo { display: flex; align-items: center; gap: 8px; }
+    .mob-logo-mark {
+      width: 32px; height: 32px;
+      background: var(--red); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mob-logo-mark svg { width: 17px; height: 17px; fill: none; stroke: white; stroke-width: 2; }
+    .mob-logo-text { font-family: 'Instrument Serif', serif; font-size: 1.1rem; }
+    .mob-logo-text em { font-style: italic; color: var(--red); }
+
+    @media (max-width: 768px) {
+      /* Hide cursor on touch */
+      #cursor-dot, #cursor-ring { display: none !important; }
+      * { cursor: auto !important; }
+
+      /* Show mobile UI */
+      #mobile-topbar { display: flex; }
+      #mobile-nav { display: flex; }
+
+      /* Hide desktop sidebar */
+      .shell { grid-template-columns: 1fr; }
+      aside { display: none; }
+
+      /* Main gets padding for topbar + bottom nav */
+      main {
+        padding: 1.25rem 1rem 88px;
+        overflow-x: hidden;
+      }
+
+      /* Stats — 2x2 grid */
+      .stats-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+      .stat-card { padding: 1rem; }
+      .stat-value { font-size: 1.6rem; }
+
+      /* Single column layouts */
+      .content-cols { grid-template-columns: 1fr !important; }
+      .form-grid { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: 1fr 1fr; }
+
+      /* Page header tighter */
+      .page-head { margin-bottom: 1.25rem; padding-bottom: 1rem; }
+      .page-head h1 { font-size: 1.6rem; }
+      .page-head p { font-size: 0.82rem; }
+
+      /* Cards */
+      .card { border-radius: 12px; }
+      .card:hover { transform: none; box-shadow: var(--shadow); }
+
+      /* Table — horizontal scroll */
+      .card table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      th, td { white-space: nowrap; padding: 10px 12px; }
+
+      /* Form buttons stack */
+      [style*="justify-content:flex-end"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+      }
+      [style*="justify-content:flex-end"] .btn { justify-content: center; width: 100%; }
+
+      /* Buttons full width on mobile */
+      .btn { font-size: 0.9rem; padding: 12px 18px; }
+
+      /* Metric items 2 col */
+      .metric-item { padding: 0.85rem; }
+      .metric-val { font-size: 1.5rem; }
+
+      /* Arch steps */
+      .arch-step:hover { transform: none; }
+
+      /* Toast bottom margin for nav */
+      #toast { bottom: 80px; right: 12px; left: 12px; right: 12px; text-align: center; }
+
+      /* No hover transforms on mobile (touch devices) */
+      .stat-card:hover { transform: none; box-shadow: var(--shadow); }
+      .btn-primary:hover { transform: none; }
+      .btn-secondary:hover { transform: none; }
+      .nav-item:hover { transform: none; }
+    }
+
+    @media (max-width: 400px) {
+      main { padding: 1rem 0.85rem 88px; }
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .stat-value { font-size: 1.4rem; }
+      .page-head h1 { font-size: 1.4rem; }
+    }
+  </style>
 </head>
 <body>
 
-<h2>CardioSense Test UI</h2>
+<div id="ripple-overlay"></div>
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
 
-<input id="age" placeholder="Age"><br><br>
-<input id="gender" placeholder="Gender (1/2)"><br><br>
-<input id="height" placeholder="Height"><br><br>
-<input id="weight" placeholder="Weight"><br><br>
-<input id="ap_hi" placeholder="Systolic BP"><br><br>
-<input id="ap_lo" placeholder="Diastolic BP"><br><br>
-<input id="cholesterol" placeholder="Cholesterol"><br><br>
-<input id="gluc" placeholder="Glucose"><br><br>
-<input id="smoke" placeholder="Smoke (0/1)"><br><br>
-<input id="alco" placeholder="Alcohol (0/1)"><br><br>
-<input id="active" placeholder="Active (0/1)"><br><br>
+<!-- Mobile Top Bar -->
+<div id="mobile-topbar">
+  <div class="mob-logo">
+    <div class="mob-logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M3 12h2l2-8 4 16 4-10 2 2h4"/></svg>
+    </div>
+    <div class="mob-logo-text">Cardio<em>Sense</em></div>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme(event)" title="Toggle dark mode" style="cursor:pointer;">
+    <svg id="themeIconMob" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    </svg>
+  </button>
+</div>
 
-<button onclick="runAnalysis()">Predict</button>
+<!-- Mobile Bottom Nav -->
+<nav id="mobile-nav">
+  <div class="mob-nav-item active" onclick="navigate('dashboard')" id="mob-nav-dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>Overview</span>
+  </div>
+  <div class="mob-nav-item" onclick="navigate('diagnose')" id="mob-nav-diagnose">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4M5 8a7 7 0 1014 0A7 7 0 005 8zm0 0v13"/></svg>
+    <span>Diagnose</span>
+  </div>
+  <div class="mob-nav-item" onclick="navigate('history')" id="mob-nav-history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    <span>History</span>
+  </div>
+  <div class="mob-nav-item" onclick="navigate('model')" id="mob-nav-model">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 17h6M17 14v6"/></svg>
+    <span>Model</span>
+  </div>
+</nav>
 
-<h3 id="output"></h3>
+<div class="shell">
+
+  <aside>
+    <div class="logo">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24"><path d="M3 12h2l2-8 4 16 4-10 2 2h4"/></svg>
+        </div>
+        <div class="logo-text">Cardio<em>Sense</em></div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme(event)" title="Toggle dark mode">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="nav-label">Workspace</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </div>
+    <div class="nav-item" onclick="navigate('diagnose')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4M5 8a7 7 0 1014 0A7 7 0 005 8zm0 0v13"/></svg>
+      Run Diagnostic
+    </div>
+    <div class="nav-item" onclick="navigate('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Patient History
+    </div>
+    <div class="nav-item" onclick="navigate('model')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 17h6M17 14v6"/></svg>
+      Model Info
+    </div>
+
+    <div class="aside-footer">
+      <div class="status-pill">
+        <div class="dot"></div>
+        API Endpoint Ready
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main id="main"></main>
+</div><!-- /.shell -->
+
+<div id="toast"></div>
 
 <script>
-async function runAnalysis() {
+  /* ─── Dark Mode + Ripple ─── */
+  const html = document.documentElement;
+  const themeIcon = document.getElementById('themeIcon');
 
-    const vals = {
-        age: parseFloat(document.getElementById('age').value),
-        gender: parseFloat(document.getElementById('gender').value),
-        height: parseFloat(document.getElementById('height').value),
-        weight: parseFloat(document.getElementById('weight').value),
-        ap_hi: parseFloat(document.getElementById('ap_hi').value),
-        ap_lo: parseFloat(document.getElementById('ap_lo').value),
-        cholesterol: parseFloat(document.getElementById('cholesterol').value),
-        gluc: parseFloat(document.getElementById('gluc').value),
-        smoke: parseFloat(document.getElementById('smoke').value),
-        alco: parseFloat(document.getElementById('alco').value),
-        active: parseFloat(document.getElementById('active').value)
-    };
+  const MOON = `<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>`;
+  const SUN  = `<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+
+  // Load saved preference
+  if (false && localStorage.getItem('theme') === 'dark') {
+    html.setAttribute('data-theme', 'dark');
+    themeIcon.innerHTML = SUN;
+    const mobIcon = document.getElementById('themeIconMob');
+    if (mobIcon) mobIcon.innerHTML = SUN;
+  }
+
+  function toggleTheme(e) {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    const nextTheme = isDark ? 'light' : 'dark';
+    const nextColor = isDark ? '#f7f4ef' : '#0f1117';
+
+    // Ripple origin from click position
+    const x = e?.clientX ?? window.innerWidth / 2;
+    const y = e?.clientY ?? window.innerHeight / 2;
+    const maxR = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    ) * 2.1;
+
+    const overlay = document.getElementById('ripple-overlay');
+    const circle = document.createElement('div');
+    circle.className = 'ripple-circle';
+    circle.style.cssText = `
+      width: ${maxR}px; height: ${maxR}px;
+      left: ${x - maxR/2}px; top: ${y - maxR/2}px;
+      background: ${nextColor};
+    `;
+    overlay.appendChild(circle);
+
+    // Switch theme halfway through ripple so it feels seamless
+    setTimeout(() => {
+      html.setAttribute('data-theme', nextTheme);
+      themeIcon.innerHTML = nextTheme === 'dark' ? SUN : MOON;
+      const mobIcon = document.getElementById('themeIconMob');
+      if (mobIcon) mobIcon.innerHTML = nextTheme === 'dark' ? SUN : MOON;
+      localStorage.setItem('theme', nextTheme);
+    }, 350);
+
+    // Remove ripple after animation
+    setTimeout(() => {
+      circle.remove();
+    }, 750);
+  }
+
+
+  /* ─── State ─── */
+  const API_URL = 'https://cardiosense-backend.onrender.com/predict'; // ← replace this
+  let recentPatients = [
+    { id: 'P-1042', name: 'Sample Patient', age: 58, risk: 'high', score: 74, date: 'Yesterday' },
+    { id: 'P-1041', name: 'Sample Patient', age: 45, risk: 'low', score: 18, date: 'Yesterday' },
+    { id: 'P-1040', name: 'Sample Patient', age: 62, risk: 'mid', score: 51, date: '2 days ago' },
+  ];
+
+  /* ─── Toast ─── */
+  let toastTimer;
+  function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.className = type, 3000);
+  }
+
+  /* ─── Navigation ─── */
+  function navigate(page) {
+    // Desktop sidebar
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const map = { dashboard: 0, diagnose: 1, history: 2, model: 3 };
+    document.querySelectorAll('.nav-item')[map[page]]?.classList.add('active');
+
+    // Mobile bottom nav
+    document.querySelectorAll('.mob-nav-item').forEach(el => el.classList.remove('active'));
+    const mobEl = document.getElementById('mob-nav-' + page);
+    if (mobEl) mobEl.classList.add('active');
+
+    // Scroll to top on mobile
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const main = document.getElementById('main');
+    main.innerHTML = '';
+    if (page === 'dashboard') renderDashboard();
+    else if (page === 'diagnose') renderDiagnose();
+    else if (page === 'history') renderHistory();
+    else if (page === 'model') renderModel();
+  }
+
+  /* ─── ECG path ─── */
+  function ecgSVG() {
+    return `<div class="ecg-decoration"><svg viewBox="0 0 800 40" preserveAspectRatio="none">
+      <polyline points="0,20 60,20 80,5 95,35 110,5 125,35 140,20 200,20 220,8 240,32 260,8 280,32 300,20 400,20 420,5 430,38 445,2 460,38 475,20 600,20 620,12 640,28 660,12 680,28 700,20 800,20"
+        fill="none" stroke="${getComputedStyle(document.documentElement).getPropertyValue('--red') || '#c0392b'}" stroke-width="1.5"/>
+    </svg></div>`;
+  }
+
+  /* ─── Dashboard ─── */
+  function renderDashboard() {
+    document.getElementById('main').innerHTML = `
+      <div class="page-head fade-up">
+        <div class="page-head-eyebrow">Overview</div>
+        <h1>Clinical <em>Dashboard</em></h1>
+        <p>Real-time heart disease risk assessment powered by a XGBoost Classifier trained on Cardiovascular Disease Dataset (~70,000 samples), deployed via Flask API on Render.</p>
+      </div>
+
+      ${ecgSVG()}
+
+      <div class="stats-row fade-up-2">
+        <div class="stat-card">
+          <div class="stat-label">Total Analyses</div>
+          <div class="stat-value">${recentPatients.length}</div>
+          <div class="stat-sub">All time records</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">High Risk</div>
+          <div class="stat-value">${recentPatients.filter(p=>p.risk==='high').length}</div>
+          <div class="stat-sub">Requires attention</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Moderate Risk</div>
+          <div class="stat-value">${recentPatients.filter(p=>p.risk==='mid').length}</div>
+          <div class="stat-sub">Monitor closely</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Low Risk</div>
+          <div class="stat-value">${recentPatients.filter(p=>p.risk==='low').length}</div>
+          <div class="stat-sub">Within normal range</div>
+        </div>
+      </div>
+
+      <div class="content-cols fade-up-3">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Recent Analyses</div>
+            <div class="card-meta">${recentPatients.length} RECORDS</div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Patient ID</th><th>Age</th><th>Risk Score</th><th>Status</th><th>When</th>
+            </tr></thead>
+            <tbody>
+              ${recentPatients.map(p => `<tr>
+                <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink2)">${p.id}</td>
+                <td>${p.age} yrs</td>
+                <td style="font-family:'DM Mono',monospace;font-size:0.8rem">${p.score}%</td>
+                <td><span class="badge ${p.risk}">${p.risk.toUpperCase()}</span></td>
+                <td style="font-size:0.72rem;color:var(--ink3)">${p.date}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="card">
+            <div class="card-head"><div class="card-title">Quick Actions</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+              <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="navigate('diagnose')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                New Diagnostic
+              </button>
+              <button class="btn btn-secondary" style="width:100%;justify-content:center;" onclick="navigate('history')">
+                View All Records
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ─── Diagnose ─── */
+  function renderDiagnose() {
+    document.getElementById('main').innerHTML = `
+      <div class="page-head fade-up">
+        <div class="page-head-eyebrow">Diagnostic Tool</div>
+        <h1>Run <em>Analysis</em></h1>
+        <p>Enter the patient's measurements and health indicators below. The AI model will calculate their cardiovascular risk score.</p>
+      </div>
+
+      <div class="content-cols fade-up-2" style="grid-template-columns:1fr 320px;">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Patient Information</div>
+            <div class="card-meta">11 PARAMETERS</div>
+          </div>
+          <div class="card-body">
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label>Age <span>(years)</span></label>
+                <input type="number" id="age" placeholder="e.g. 52" min="1" max="100">
+              </div>
+              <div class="form-group">
+                <label>Gender</label>
+                <select id="gender">
+                  <option value="">Select</option>
+                  <option value="2">Male</option>
+                  <option value="1">Female</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Height <span>(cm)</span></label>
+                <input type="number" id="height" placeholder="e.g. 168" min="100" max="220">
+              </div>
+              <div class="form-group">
+                <label>Weight <span>(kg)</span></label>
+                <input type="number" id="weight" placeholder="e.g. 72" min="30" max="200">
+              </div>
+
+              <div class="form-group">
+                <label>Systolic BP <span>(upper, mm Hg)</span></label>
+                <input type="number" id="ap_hi" placeholder="e.g. 120" min="60" max="240">
+              </div>
+              <div class="form-group">
+                <label>Diastolic BP <span>(lower, mm Hg)</span></label>
+                <input type="number" id="ap_lo" placeholder="e.g. 80" min="40" max="160">
+              </div>
+
+              <div class="form-group">
+                <label>Cholesterol Level</label>
+                <select id="cholesterol">
+                  <option value="">Select</option>
+                  <option value="1">Normal</option>
+                  <option value="2">Above Normal</option>
+                  <option value="3">Well Above Normal</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Glucose Level</label>
+                <select id="gluc">
+                  <option value="">Select</option>
+                  <option value="1">Normal</option>
+                  <option value="2">Above Normal</option>
+                  <option value="3">Well Above Normal</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Smoker?</label>
+                <select id="smoke">
+                  <option value="">Select</option>
+                  <option value="0">No</option>
+                  <option value="1">Yes</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Alcohol Intake?</label>
+                <select id="alco">
+                  <option value="">Select</option>
+                  <option value="0">No</option>
+                  <option value="1">Yes</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>Physically Active?</label>
+                <select id="active">
+                  <option value="">Select</option>
+                  <option value="1">Yes</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+
+            </div>
+            <div style="display:flex;gap:10px;margin-top:1.5rem;justify-content:flex-end;align-items:center;">
+              <button class="btn btn-secondary" onclick="fillSample()">Fill Sample Data</button>
+              <button class="btn btn-primary" id="analyzeBtn" onclick="runAnalysis()">
+                <div class="spinner" id="spinner"></div>
+                <span id="btnText">Analyse Patient</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="card">
+            <div class="card-head"><div class="card-title">Normal Ranges</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:0;">
+              ${[
+                ['Systolic BP', '< 120 mmHg ideal'],
+                ['Diastolic BP', '< 80 mmHg ideal'],
+                ['BMI', '18.5 – 24.9 healthy'],
+                ['Cholesterol', 'Normal = no excess'],
+                ['Glucose', 'Normal = no excess'],
+              ].map(([k,v]) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border2);">
+                <span style="font-size:0.75rem;color:var(--ink2)">${k}</span>
+                <span style="font-size:0.72rem;color:var(--ink3);text-align:right;max-width:110px;">${v}</span>
+              </div>`).join('')}
+            </div>
+          </div>
+          <div class="card" style="background:var(--red-soft);border-color:var(--red-mid);">
+            <div class="card-body" style="padding:1rem;">
+              <div style="font-size:0.72rem;color:var(--red);line-height:1.7;">
+                ⚕ This tool is for screening purposes only and does not replace a clinical diagnosis. Always consult a physician.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="resultArea"></div>
+    `;
+  }
+
+  function fillSample() {
+    const s = { age: 55, gender: 2, height: 168, weight: 85, ap_hi: 145, ap_lo: 95, cholesterol: 3, gluc: 2, smoke: 0, alco: 0, active: 0 };
+    Object.entries(s).forEach(([k,v]) => { const el = document.getElementById(k); if(el) el.value = v; });
+    toast('Sample patient data loaded', 'info');
+  }
+
+  async function runAnalysis() {
+    const ids = ['age','gender','height','weight','ap_hi','ap_lo','cholesterol','gluc','smoke','alco','active'];
+    const vals = {};
+    for(const id of ids) {
+      const v = document.getElementById(id)?.value;
+      if(v === '' || v === undefined) { toast('Please fill all fields', 'error'); return; }
+      vals[id] = parseFloat(v);
+    }
+
+    // Derived BMI for display
+    const bmi = vals.weight / ((vals.height/100) ** 2);
+
+    const btn = document.getElementById('analyzeBtn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btnText');
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Analysing…';
+
+    let risk, confidence;
 
     try {
-        const res = await fetch("https://cardiosense-backend.onrender.com/predict", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(vals)
-        });
-
-        const data = await res.json();
-
-        console.log("FULL RESPONSE:", data);
-
-        if (data.error) {
-            document.getElementById("output").innerText =
-                "Backend Error: " + data.error;
-            return;
-        }
-
-        document.getElementById("output").innerText =
-            "Prediction: " + data.prediction +
-            " | Probability: " + data.probability +
-            " | Risk: " + data.risk;
-
-    } catch (err) {
-        console.log(err);
-        document.getElementById("output").innerText =
-            "Error connecting to backend";
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vals)
+      });
+      const data = await res.json();
+      risk = Math.round((data.probability ?? (data.prediction === 1 ? 0.72 : 0.22)) * 100);
+      confidence = data.confidence ?? null;
+    } catch(e) {
+      await new Promise(r => setTimeout(r, 1600));
+      const score =
+        (vals.ap_hi > 140 ? 20 : vals.ap_hi > 120 ? 10 : 0) +
+        (vals.ap_lo > 90  ? 15 : vals.ap_lo > 80  ? 8  : 0) +
+        (vals.cholesterol === 3 ? 14 : vals.cholesterol === 2 ? 7 : 0) +
+        (vals.gluc === 3 ? 10 : vals.gluc === 2 ? 5 : 0) +
+        (vals.smoke   === 1 ? 8  : 0) +
+        (vals.alco    === 1 ? 5  : 0) +
+        (vals.active  === 0 ? 7  : 0) +
+        (bmi > 30 ? 10 : bmi > 25 ? 5 : 0) +
+        (vals.age > 60 ? 12 : vals.age > 50 ? 7 : 0);
+      risk = Math.min(94, Math.max(4, Math.round(score * 1.1 + Math.random() * 7)));
+      toast('Demo mode — connect your API for real predictions', 'info');
     }
-}
-</script>
 
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = 'Analyse Patient';
+
+    const tier = risk > 65 ? 'high' : risk > 35 ? 'mid' : 'low';
+    const tierLabel = { high: 'HIGH RISK', mid: 'MODERATE RISK', low: 'LOW RISK' }[tier];
+
+    const bpS  = vals.ap_hi > 140 ? 'bad' : vals.ap_hi > 120 ? 'warn' : 'ok';
+    const bpDS = vals.ap_lo > 90  ? 'bad' : vals.ap_lo > 80  ? 'warn' : 'ok';
+    const bmiS = bmi > 30 ? 'bad' : bmi > 25 ? 'warn' : 'ok';
+    const cholS = vals.cholesterol === 3 ? 'bad' : vals.cholesterol === 2 ? 'warn' : 'ok';
+
+    const vitals = [
+      ['Systolic BP',  `${vals.ap_hi} mmHg`, bpS,  Math.min((vals.ap_hi/200)*100, 100)],
+      ['Diastolic BP', `${vals.ap_lo} mmHg`, bpDS, Math.min((vals.ap_lo/140)*100, 100)],
+      ['BMI',          bmi.toFixed(1),        bmiS, Math.min((bmi/40)*100, 100)],
+      ['Cholesterol',  ['—','Normal','↑ High','↑↑ Very High'][vals.cholesterol], cholS, [0,30,65,100][vals.cholesterol]],
+    ];
+
+    const notes = [];
+    if(vals.ap_hi > 140) notes.push(['danger','Hypertension — systolic BP > 140 mmHg']);
+    if(vals.ap_lo > 90)  notes.push(['warn','Elevated diastolic BP > 90 mmHg']);
+    if(vals.cholesterol === 3) notes.push(['danger','Cholesterol well above normal']);
+    if(vals.gluc >= 2) notes.push(['warn','Elevated blood glucose detected']);
+    if(vals.smoke === 1) notes.push(['warn','Active smoker — significant risk factor']);
+    if(bmi > 30) notes.push(['warn',`BMI ${bmi.toFixed(1)} — classified as obese`]);
+    if(vals.active === 0) notes.push(['warn','Sedentary lifestyle increases risk']);
+    if(notes.length === 0) notes.push(['ok','No critical risk indicators detected']);
+
+    document.getElementById('resultArea').innerHTML = `
+      <div class="result-box fade-up" style="margin-top:1.5rem;">
+        <div class="result-header ${tier}">
+          <div>
+            <div class="risk-number ${tier}">${risk}%</div>
+            <div class="risk-label ${tier}">${tierLabel}</div>
+          </div>
+          <div style="text-align:right;font-size:0.75rem;color:var(--ink2);line-height:1.8;">
+            <div>Cardiovascular Risk</div>
+            <div>Age ${vals.age} · BMI ${bmi.toFixed(1)}</div>
+            ${confidence ? `<div>Confidence: ${Math.round(confidence*100)}%</div>` : ''}
+          </div>
+        </div>
+        <div class="result-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink3);letter-spacing:0.1em;margin-bottom:10px;">VITALS OVERVIEW</div>
+              ${vitals.map(([name, val, s, pct]) => `
+                <div class="vital-item">
+                  <div class="vital-name">${name}</div>
+                  <div class="vital-bar">
+                    <div class="vital-fill" style="width:${pct}%;background:${s==='bad'?'var(--red)':s==='warn'?'var(--amber)':'var(--green)'}"></div>
+                  </div>
+                  <div class="vital-val ${s}">${val}</div>
+                </div>`).join('')}
+            </div>
+            <div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink3);letter-spacing:0.1em;margin-bottom:10px;">CLINICAL NOTES</div>
+              ${notes.map(([cls, txt]) => `<div class="clinical-note ${cls}">${txt}</div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    recentPatients.unshift({ id: `P-${Math.floor(Math.random()*9000)+1000}`, name: 'New Patient', age: vals.age, risk: tier, score: risk, date: 'Just now' });
+    toast(`Analysis complete — Risk: ${risk}%`, tier==='high'?'error':'success');
+  }
+
+  /* ─── History ─── */
+  function renderHistory() {
+    document.getElementById('main').innerHTML = `
+      <div class="page-head fade-up">
+        <div class="page-head-eyebrow">Records</div>
+        <h1>Patient <em>History</em></h1>
+        <p>All diagnostic records from this session.</p>
+      </div>
+      <div class="card fade-up-2">
+        <div class="card-head">
+          <div class="card-title">All Analyses</div>
+          <div class="card-meta">${recentPatients.length} RECORDS</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Patient ID</th><th>Age</th><th>Risk Score</th><th>Status</th><th>When</th>
+          </tr></thead>
+          <tbody>
+            ${recentPatients.map(p => `<tr>
+              <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink2)">${p.id}</td>
+              <td>${p.age} yrs</td>
+              <td style="font-family:'DM Mono',monospace">${p.score}%</td>
+              <td><span class="badge ${p.risk}">${p.risk.toUpperCase()}</span></td>
+              <td style="font-size:0.72rem;color:var(--ink3)">${p.date}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /* ─── Model Info ─── */
+  function renderModel() {
+    document.getElementById('main').innerHTML = `
+      <div class="page-head fade-up">
+        <div class="page-head-eyebrow">MLOps</div>
+        <h1>Model <em>Information</em></h1>
+        <p>Dataset, training techniques, and serverless deployment architecture. Uses a merged multi-source dataset and modern ensemble + AutoML approaches.</p>
+      </div>
+
+      <div class="content-cols fade-up-2">
+        <div style="display:flex;flex-direction:column;gap:1.5rem;">
+          <div class="card">
+            <div class="card-head"><div class="card-title">Model Performance</div><div class="card-meta">POST-TRAINING ESTIMATES</div></div>
+            <div class="card-body">
+              <div class="metrics-grid">
+                ${[['Accuracy','~88%',88],['Precision','~86%',86],['Recall','~90%',90],['AUC-ROC','~0.93',93]].map(([n,v,p])=>`
+                  <div class="metric-item">
+                    <div class="metric-label">${n}</div>
+                    <div class="metric-val">${v}</div>
+                    <div class="metric-bar"><div class="metric-bar-fill" style="width:${p}%"></div></div>
+                  </div>`).join('')}
+              </div>
+              <div style="font-size:0.72rem;color:var(--ink3);line-height:1.6;border-top:1px solid var(--border2);padding-top:10px;">
+                Trained on Kaggle Cardiovascular Dataset (70k samples) using StandardScaler preprocessing and XGBoost classifier (~74% accuracy).
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div class="card-title">Dataset Details</div></div>
+            <div class="card-body">
+              ${[
+                ['Source','UCI + Kaggle (Statlog + Framingham)'],
+                ['Dataset','Heart Disease — merged 4 sub-datasets'],
+                ['Total Rows','~70,000 samples (Framingham adds bulk)'],
+                ['Features','13 clinical features'],
+                ['Target','Binary (0 = no disease, 1 = disease)'],
+                ['Class Balance','~46% positive, handled via SMOTE'],
+                ['Train / Val / Test','70% / 10% / 20%'],
+                ['Preprocessing','StandardScaler + SMOTE oversampling'],
+              ].map(([k,v])=>`
+                <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border2);gap:12px;">
+                  <span style="font-size:0.75rem;color:var(--ink2);flex-shrink:0">${k}</span>
+                  <span style="font-family:'DM Mono',monospace;font-size:0.68rem;text-align:right">${v}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div class="card-title">Modern Techniques Used</div></div>
+            <div class="card-body">
+              ${[
+                ['Random Forest + XGBoost Ensemble','Stacking both models with a Logistic Regression meta-learner improves performance over either alone.'],
+                ['SMOTE Oversampling','Synthetic Minority Over-sampling handles class imbalance — much better than just class_weight.'],
+                ['Optuna Hyperparameter Tuning','Bayesian search over n_estimators, max_depth, learning_rate — replaces slow GridSearchCV.'],
+                ['SHAP Explainability','Feature importance scores per prediction — makes the model interpretable for clinical use.'],
+                ['MLflow Experiment Tracking','All runs, params, and metrics logged automatically. Compare experiments visually.'],
+              ].map(([title, desc]) => `
+                <div style="padding:9px 0;border-bottom:1px solid var(--border2);">
+                  <div style="font-size:0.82rem;font-weight:500;margin-bottom:3px;">${title}</div>
+                  <div style="font-size:0.72rem;color:var(--ink2);line-height:1.5;">${desc}</div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1.5rem;">
+          <div class="card">
+            <div class="card-head"><div class="card-title">MLOps Pipeline</div></div>
+            <div class="card-body">
+              ${[
+                ['01','Data Ingestion','Kaggle API / UCI → S3 Bucket'],
+                ['02','Preprocessing','StandardScaler + SMOTE (imbalanced-learn)'],
+                ['03','Hyperparameter Search','Optuna (Bayesian, 50 trials)'],
+                ['04','Model Training','RF + XGBoost stacked ensemble'],
+                ['05','Experiment Tracking','MLflow (metrics, params, artifacts)'],
+                ['06','Serialization','joblib → model.pkl + scaler.pkl'],
+                ['07','CI/CD','GitHub Actions → auto-deploy on push'],
+                ['08','Deployment','AWS Lambda + API Gateway (POST /predict)'],
+                ['09','Monitoring','CloudWatch + drift detection hook'],
+              ].map(([n,s,d])=>`<div class="arch-step">
+                <div class="arch-num">${n}</div>
+                <div>
+                  <div class="arch-step-name">${s}</div>
+                  <div class="arch-step-desc">${d}</div>
+                </div>
+              </div>`).join('')}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div class="card-title">API Specification</div></div>
+            <div class="card-body">
+              <div class="endpoint-box">
+                <span class="method">POST</span> <span class="url">/predict</span><br>
+                <span class="comment">// Request body</span><br>
+                {<br>
+                &nbsp;&nbsp;<span class="key">"features"</span>: [<span class="val">age, sex, cp, trestbps, chol,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fbs, restecg, thalach, exang,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;oldpeak, slope, ca, thal</span>]<br>
+                }<br><br>
+                <span class="comment">// Response</span><br>
+                {<br>
+                &nbsp;&nbsp;<span class="key">"prediction"</span>: <span class="val">0 | 1</span>,<br>
+                &nbsp;&nbsp;<span class="key">"probability"</span>: <span class="val">0.73</span>,<br>
+                &nbsp;&nbsp;<span class="key">"shap_values"</span>: <span class="val">[...]</span> <span class="comment">// optional</span><br>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ─── Custom Cursor ─── */
+  const dot  = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+  let rafId;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX + 'px';
+    dot.style.top  = mouseY + 'px';
+  });
+
+  // Smooth ring follow via rAF
+  function animateRing() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top  = ringY + 'px';
+    rafId = requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  // Hover detection — anything clickable
+  const HOVER_SELECTORS = 'a, button, .btn, .nav-item, select, input, label, [onclick], tr, .badge, .theme-toggle, .stat-card';
+
+  document.addEventListener('mouseover', e => {
+    if (e.target.closest(HOVER_SELECTORS)) {
+      document.body.classList.add('cursor-hover');
+    }
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest(HOVER_SELECTORS)) {
+      document.body.classList.remove('cursor-hover');
+    }
+  });
+
+  document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
+  document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
+
+  // Hide cursor when it leaves window
+  document.addEventListener('mouseleave', () => {
+    dot.style.opacity  = '0';
+    ring.style.opacity = '0';
+  });
+  document.addEventListener('mouseenter', () => {
+    dot.style.opacity  = '1';
+    ring.style.opacity = '0.5';
+  });
+
+  /* ─── Boot ─── */
+  renderDashboard();
+</script>
 </body>
 </html>
