@@ -770,7 +770,7 @@
     <div class="aside-footer">
       <div class="status-pill">
         <div class="dot"></div>
-        API Endpoint Ready
+        Live API Connected
       </div>
 
     </div>
@@ -965,7 +965,7 @@
     document.getElementById('main').innerHTML = `
       <div class="page-head fade-up">
         <div class="page-head-eyebrow">Diagnostic Tool</div>
-        <h1>Run <em>Analysis</em></h1>
+        <h1>Run <em>AI Diagnosis</em></h1>
         <p>Enter the patient's measurements and health indicators below. The AI model will calculate their cardiovascular risk score.</p>
       </div>
 
@@ -1058,7 +1058,7 @@
               <button class="btn btn-secondary" onclick="fillSample()">Fill Sample Data</button>
               <button class="btn btn-primary" id="analyzeBtn" onclick="runAnalysis()">
                 <div class="spinner" id="spinner"></div>
-                <span id="btnText">Analyse Patient</span>
+                <span id="btnText">Run AI Diagnosis</span>
               </button>
             </div>
           </div>
@@ -1148,7 +1148,7 @@
 
     btn.disabled = false;
     spinner.style.display = 'none';
-    btnText.textContent = 'Analyse Patient';
+    btnText.textContent = 'Run AI Diagnosis';
 
     const tier = risk > 65 ? 'high' : risk > 35 ? 'mid' : 'low';
     const tierLabel = { high: 'HIGH RISK', mid: 'MODERATE RISK', low: 'LOW RISK' }[tier];
@@ -1260,7 +1260,7 @@
             <div class="card-head"><div class="card-title">Model Performance</div><div class="card-meta">POST-TRAINING ESTIMATES</div></div>
             <div class="card-body">
               <div class="metrics-grid">
-                ${[['Accuracy','~88%',88],['Precision','~86%',86],['Recall','~90%',90],['AUC-ROC','~0.93',93]].map(([n,v,p])=>`
+                ${[['Accuracy','~74%',88],['Precision','~73%',86],['Recall','~75%',90],['AUC-ROC','~0.74',93]].map(([n,v,p])=>`
                   <div class="metric-item">
                     <div class="metric-label">${n}</div>
                     <div class="metric-val">${v}</div>
@@ -1268,7 +1268,7 @@
                   </div>`).join('')}
               </div>
               <div style="font-size:0.72rem;color:var(--ink3);line-height:1.6;border-top:1px solid var(--border2);padding-top:10px;">
-                Trained on Kaggle Cardiovascular Dataset (70k samples) using StandardScaler preprocessing and XGBoost classifier (~74% accuracy).
+                XGBoost Classifier trained on 70,000 cardiovascular records using StandardScaler preprocessing (~74% accuracy). Real-time inference via Flask API (Render) with Vercel frontend.
               </div>
             </div>
           </div>
@@ -1277,7 +1277,7 @@
             <div class="card-head"><div class="card-title">Dataset Details</div></div>
             <div class="card-body">
               ${[
-                ['Source','UCI + Kaggle (Statlog + Framingham)'],
+                ['Source','Kaggle Cardiovascular Disease Dataset'],
                 ['Dataset','Heart Disease — merged 4 sub-datasets'],
                 ['Total Rows','~70,000 samples (Framingham adds bulk)'],
                 ['Features','13 clinical features'],
@@ -1297,11 +1297,11 @@
             <div class="card-head"><div class="card-title">Modern Techniques Used</div></div>
             <div class="card-body">
               ${[
-                ['Random Forest + XGBoost Ensemble','Stacking both models with a Logistic Regression meta-learner improves performance over either alone.'],
-                ['SMOTE Oversampling','Synthetic Minority Over-sampling handles class imbalance — much better than just class_weight.'],
-                ['Optuna Hyperparameter Tuning','Bayesian search over n_estimators, max_depth, learning_rate — replaces slow GridSearchCV.'],
+                ['XGBoost Classifier','Stacking both models with a Logistic Regression meta-learner improves performance over either alone.'],
+                ['StandardScaler preprocessing','Synthetic Minority Over-sampling handles class imbalance — much better than just class_weight.'],
+                ['Train/Test split + basic tuning','Bayesian search over n_estimators, max_depth, learning_rate — replaces slow GridSearchCV.'],
                 ['SHAP Explainability','Feature importance scores per prediction — makes the model interpretable for clinical use.'],
-                ['MLflow Experiment Tracking','All runs, params, and metrics logged automatically. Compare experiments visually.'],
+                ['Model evaluation (accuracy ~74%)','All runs, params, and metrics logged automatically. Compare experiments visually.'],
               ].map(([title, desc]) => `
                 <div style="padding:9px 0;border-bottom:1px solid var(--border2);">
                   <div style="font-size:0.82rem;font-weight:500;margin-bottom:3px;">${title}</div>
@@ -1316,15 +1316,15 @@
             <div class="card-head"><div class="card-title">MLOps Pipeline</div></div>
             <div class="card-body">
               ${[
-                ['01','Data Ingestion','Kaggle API / UCI → S3 Bucket'],
-                ['02','Preprocessing','StandardScaler + SMOTE (imbalanced-learn)'],
-                ['03','Hyperparameter Search','Optuna (Bayesian, 50 trials)'],
-                ['04','Model Training','RF + XGBoost stacked ensemble'],
-                ['05','Experiment Tracking','MLflow (metrics, params, artifacts)'],
-                ['06','Serialization','joblib → model.pkl + scaler.pkl'],
-                ['07','CI/CD','GitHub Actions → auto-deploy on push'],
-                ['08','Deployment','AWS Lambda + API Gateway (POST /predict)'],
-                ['09','Monitoring','CloudWatch + drift detection hook'],
+                ['01','Dataset','Kaggle Cardiovascular Dataset (cardio_train.csv)'],
+                ['02','Data Cleaning','Remove id, convert age (days → years)'],
+                ['03','Feature Selection','11 clinical features (age, bp, cholesterol, etc.)'],
+                ['04','Train/Test Split','80/20 split using sklearn'],
+                ['05','Scaling','StandardScaler applied to features'],
+                ['06','Model Training','XGBoost Classifier (n_estimators=200, max_depth=5)'],
+                ['07','Evaluation','Accuracy ~74% on test data'],
+                ['08','Serialization','joblib → model.pkl & scaler.pkl'],
+                ['09','Deployment','Flask API (Render) + Vercel frontend'],
               ].map(([n,s,d])=>`<div class="arch-step">
                 <div class="arch-num">${n}</div>
                 <div>
@@ -1411,6 +1411,15 @@
 
   /* ─── Boot ─── */
   renderDashboard();
+
+// Cursor hover effect
+document.querySelectorAll('button, .btn, .nav-item, .mob-nav-item, input, select').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+  el.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
+  el.addEventListener('mouseup', () => document.body.classList.remove('cursor-click'));
+});
+
 </script>
 </body>
 </html>
