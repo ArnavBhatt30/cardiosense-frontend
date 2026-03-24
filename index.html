@@ -6,6 +6,7 @@
   <title>CardioSense — Heart Disease Diagnostic</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -838,8 +839,8 @@
 
 
   /* ─── State ─── */
-  const API_URL = 'https://cardiosense-backend.onrender.com/predict'; // ← replace this
-  let recentPatients = [];
+  const API_URL = 'https://cardiosense-backend-production.up.railway.app/predict'; // ← replace this
+  let recentPatients = JSON.parse(localStorage.getItem("patients") || "[]");
 
   /* ─── Toast ─── */
   let toastTimer;
@@ -924,7 +925,7 @@
           </div>
           <table>
             <thead><tr>
-              <th>Patient ID</th><th>Age</th><th>Risk Score</th><th>Status</th><th>When</th>
+              <th>Patient ID</th><th>Age</th><th>Risk Score</th><th>Status</th><th>When</th><th>Report</th>
             </tr></thead>
             <tbody>
               ${recentPatients.map(p => `<tr>
@@ -1123,23 +1124,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(vals)
       });
+      if (!res.ok) throw new Error('Server error ' + res.status);
       const data = await res.json();
+      if (data.probability === undefined && data.prediction === undefined) throw new Error('Invalid response from backend');
       risk = Math.round((data.probability ?? (data.prediction === 1 ? 0.72 : 0.22)) * 100);
       confidence = data.confidence ?? null;
     } catch(e) {
-      await new Promise(r => setTimeout(r, 1600));
-      const score =
-        (vals.ap_hi > 140 ? 20 : vals.ap_hi > 120 ? 10 : 0) +
-        (vals.ap_lo > 90  ? 15 : vals.ap_lo > 80  ? 8  : 0) +
-        (vals.cholesterol === 3 ? 14 : vals.cholesterol === 2 ? 7 : 0) +
-        (vals.gluc === 3 ? 10 : vals.gluc === 2 ? 5 : 0) +
-        (vals.smoke   === 1 ? 8  : 0) +
-        (vals.alco    === 1 ? 5  : 0) +
-        (vals.active  === 0 ? 7  : 0) +
-        (bmi > 30 ? 10 : bmi > 25 ? 5 : 0) +
-        (vals.age > 60 ? 12 : vals.age > 50 ? 7 : 0);
-      risk = Math.min(94, Math.max(4, Math.round(score * 1.1 + Math.random() * 7)));
-      toast('Demo mode — connect your API for real predictions', 'info');
+      toast('Backend not reachable', 'error');
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Analyse Patient';
+      return;
     }
 
     btn.disabled = false;
@@ -1206,7 +1201,8 @@
       </div>
     `;
 
-    recentPatients.unshift({ id: `P-${Math.floor(Math.random()*9000)+1000}`, name: 'New Patient', age: vals.age, risk: tier, score: risk, date: 'Just now' });
+    recentPatients.unshift({ id: `P-${Math.floor(Math.random()*9000)+1000}`, name: 'New Patient', age: vals.age, risk: tier, score: risk, date: new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) });
+    localStorage.setItem("patients", JSON.stringify(recentPatients));
     toast(`Analysis complete — Risk: ${risk}%`, tier==='high'?'error':'success');
   }
 
@@ -1215,7 +1211,7 @@
     document.getElementById('main').innerHTML = `
       <div class="page-head fade-up">
         <div class="page-head-eyebrow">Records</div>
-        <h1>Patient <em>History</em></h1>
+        <h1>Patient <em>History</em> </h1>
         <p>All diagnostic records from this session. (No records yet — run a diagnosis to populate.)</p>
       </div>
       <div class="card fade-up-2">
@@ -1225,7 +1221,7 @@
         </div>
         <table>
           <thead><tr>
-            <th>Patient ID</th><th>Age</th><th>Risk Score</th><th>Status</th><th>When</th>
+            <th>Patient ID</th><th>Age</th><th>Risk Score</th><th>Status</th><th>When</th><th>Report</th>
           </tr></thead>
           <tbody>
             ${recentPatients.map(p => `<tr>
@@ -1234,6 +1230,7 @@
               <td style="font-family:'DM Mono',monospace">${p.score}%</td>
               <td><span class="badge ${p.risk}">${p.risk.toUpperCase()}</span></td>
               <td style="font-size:0.72rem;color:var(--ink3)">${p.date}</td>
+              <td><button class='btn btn-secondary btn-sm' onclick='downloadSingleReport("${p.id}")'>PDF</button></td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -1415,6 +1412,225 @@ document.querySelectorAll('button, .btn, .nav-item, .mob-nav-item, input, select
   el.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
   el.addEventListener('mouseup', () => document.body.classList.remove('cursor-click'));
 });
+
+
+function downloadReport() {
+  if (recentPatients.length === 0) {
+    toast('No records to export', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+
+  // Header bar
+  doc.setFillColor(192, 57, 43);
+  doc.rect(0, 0, W, 22, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('CardioSense', 14, 10);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Cardiovascular Risk Assessment Platform', 14, 16);
+  doc.setFontSize(8);
+  doc.text('Patient History Export · ' + new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}), W - 14, 16, { align: 'right' });
+
+  // Title
+  doc.setTextColor(26, 20, 16);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('All Patient Records', 14, 34);
+
+  // Table header
+  let y = 42;
+  const cols = [14, 46, 72, 104, 136, 168];
+  const headers = ['Patient ID', 'Age', 'Risk Score', 'Risk Level', 'Date', ''];
+  doc.setFillColor(245, 241, 236);
+  doc.rect(12, y - 5, W - 24, 9, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(90, 78, 68);
+  headers.forEach((h, i) => doc.text(h, cols[i], y));
+
+  y += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+
+  recentPatients.forEach((p, idx) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    if (idx % 2 === 0) {
+      doc.setFillColor(251, 248, 244);
+      doc.rect(12, y - 5, W - 24, 8, 'F');
+    }
+    const riskColors = { high: [192,57,43], mid: [212,118,10], low: [45,106,79] };
+    const [r,g,b] = riskColors[p.risk] || [90,78,68];
+    doc.setTextColor(26, 20, 16);
+    doc.text(String(p.id), cols[0], y);
+    doc.text(String(p.age) + ' yrs', cols[1], y);
+    doc.text(String(p.score) + '%', cols[2], y);
+    doc.setTextColor(r, g, b);
+    doc.setFont('helvetica', 'bold');
+    doc.text(p.risk.toUpperCase(), cols[3], y);
+    doc.setTextColor(26, 20, 16);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(p.date), cols[4], y);
+    y += 8;
+  });
+
+  // Footer
+  doc.setDrawColor(220, 210, 200);
+  doc.line(12, 285, W - 12, 285);
+  doc.setFontSize(7);
+  doc.setTextColor(156, 142, 132);
+  doc.text('CardioSense · For screening purposes only · Not a substitute for clinical diagnosis', W / 2, 290, { align: 'center' });
+
+  doc.save('CardioSense_All_Records.pdf');
+  toast('PDF downloaded', 'success');
+}
+
+function downloadSingleReport(id) {
+  const p = recentPatients.find(x => x.id === id);
+  if (!p) { toast('Record not found', 'error'); return; }
+
+  if (!window.jspdf) { toast('PDF library not loaded yet', 'error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+
+  // Risk palette
+  const palettes = {
+    high: { bg: [192,57,43], soft: [245,230,228], label: 'HIGH RISK' },
+    mid:  { bg: [212,118,10], soft: [253,243,227], label: 'MODERATE RISK' },
+    low:  { bg: [45,106,79],  soft: [232,245,238], label: 'LOW RISK' },
+  };
+  const pal = palettes[p.risk] || palettes.low;
+
+  // Header strip
+  doc.setFillColor(...pal.bg);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('CardioSense', 14, 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text('Cardiovascular Risk Assessment Report', 14, 19);
+  doc.setFontSize(8);
+  doc.text(new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'}), W - 14, 19, { align: 'right' });
+
+  // Risk score hero box
+  doc.setFillColor(...pal.soft);
+  doc.roundedRect(14, 34, W - 28, 34, 4, 4, 'F');
+  doc.setTextColor(...pal.bg);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(38);
+  doc.text(p.score + '%', 28, 58);
+  doc.setFontSize(10);
+  doc.text(pal.label, 28, 64);
+  doc.setTextColor(90, 78, 68);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text('Cardiovascular Risk Score', W - 28, 50, { align: 'right' });
+  doc.text('Assessed by XGBoost ML Model', W - 28, 57, { align: 'right' });
+
+  // Divider
+  doc.setDrawColor(...pal.bg);
+  doc.setLineWidth(0.4);
+  doc.line(14, 74, W - 14, 74);
+
+  // Patient details section
+  doc.setTextColor(26, 20, 16);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Patient Details', 14, 83);
+
+  const details = [
+    ['Patient ID', String(p.id)],
+    ['Age', String(p.age) + ' years'],
+    ['Risk Level', pal.label],
+    ['Risk Score', String(p.score) + '%'],
+    ['Assessment Date', String(p.date)],
+  ];
+
+  let y = 91;
+  details.forEach(([label, value], i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 245, 241);
+      doc.rect(14, y - 5, W - 28, 9, 'F');
+    }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 78, 68);
+    doc.text(label, 18, y);
+    doc.setTextColor(26, 20, 16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(value, W - 18, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    y += 10;
+  });
+
+  // Risk indicator bar
+  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(26, 20, 16);
+  doc.text('Risk Indicator', 14, y);
+  y += 6;
+  // Background bar
+  doc.setFillColor(230, 220, 215);
+  doc.roundedRect(14, y, W - 28, 6, 2, 2, 'F');
+  // Filled portion
+  const fillW = ((W - 28) * p.score) / 100;
+  doc.setFillColor(...pal.bg);
+  doc.roundedRect(14, y, fillW, 6, 2, 2, 'F');
+  // Labels
+  y += 11;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(90, 78, 68);
+  doc.text('0%  Low Risk', 14, y);
+  doc.text('50%  Moderate', W / 2, y, { align: 'center' });
+  doc.text('High Risk  100%', W - 14, y, { align: 'right' });
+
+  // Disclaimer
+  y += 14;
+  doc.setFillColor(...pal.soft);
+  doc.roundedRect(14, y, W - 28, 18, 3, 3, 'F');
+  doc.setTextColor(...pal.bg);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.text('⚕  Medical Disclaimer', 19, y + 7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(90, 78, 68);
+  doc.text('This report is generated for screening purposes only and does not constitute a clinical diagnosis.', 19, y + 13);
+  doc.text('Please consult a qualified physician for a full evaluation.', 19, y + 18);
+
+  // Footer
+  doc.setDrawColor(220, 210, 200);
+  doc.line(12, 283, W - 12, 283);
+  doc.setFontSize(7);
+  doc.setTextColor(156, 142, 132);
+  doc.text('CardioSense · Powered by XGBoost ML · Flask API on Render', W / 2, 288, { align: 'center' });
+
+  doc.save(`CardioSense_Report_${p.id}.pdf`);
+  toast('PDF downloaded', 'success');
+}
+
+
+// History persistence is handled at state initialization above (line with recentPatients declaration)
+
+// Explanation generator
+function generateExplanation(data) {
+  let reasons = [];
+  if (data.ap_hi > 140) reasons.push("High systolic BP");
+  if (data.ap_lo > 90) reasons.push("High diastolic BP");
+  if (data.cholesterol > 1) reasons.push("High cholesterol");
+  if (data.gluc > 1) reasons.push("High glucose");
+  if (data.weight / ((data.height/100)**2) > 30) reasons.push("High BMI");
+
+  return reasons.length ? reasons.join(", ") : "No major risk factors detected";
+}
 
 </script>
 </body>
