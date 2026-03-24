@@ -839,11 +839,7 @@
 
   /* ─── State ─── */
   const API_URL = 'https://cardiosense-backend.onrender.com/predict'; // ← replace this
-  let recentPatients = [
-    { id: 'P-1042', name: 'Sample Patient', age: 58, risk: 'high', score: 74, date: 'Yesterday' },
-    { id: 'P-1041', name: 'Sample Patient', age: 45, risk: 'low', score: 18, date: 'Yesterday' },
-    { id: 'P-1040', name: 'Sample Patient', age: 62, risk: 'mid', score: 51, date: '2 days ago' },
-  ];
+  let recentPatients = [];
 
   /* ─── Toast ─── */
   let toastTimer;
@@ -1220,7 +1216,7 @@
       <div class="page-head fade-up">
         <div class="page-head-eyebrow">Records</div>
         <h1>Patient <em>History</em></h1>
-        <p>All diagnostic records from this session.</p>
+        <p>All diagnostic records from this session. (No records yet — run a diagnosis to populate.)</p>
       </div>
       <div class="card fade-up-2">
         <div class="card-head">
