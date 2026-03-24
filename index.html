@@ -36,6 +36,7 @@
     * { cursor: none !important; }
 
     #cursor-dot {
+      transition: transform 0.05s linear;
       position: fixed;
       width: 8px; height: 8px;
       background: var(--red);
@@ -43,10 +44,11 @@
       pointer-events: none;
       z-index: 999999;
       transform: translate(-50%, -50%);
-      transition: width 0.15s ease, height 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+      transition: width 0.08s ease, height 0.08s ease, background 0.08s ease, opacity 0.08s ease;
       will-change: transform;
     }
     #cursor-ring {
+      transition: transform 0.06s linear;
       position: fixed;
       width: 32px; height: 32px;
       border: 1.5px solid var(--red);
@@ -55,16 +57,18 @@
       z-index: 999998;
       transform: translate(-50%, -50%);
       opacity: 0.5;
-      transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      transition: width 0.1s ease, height 0.1s ease, opacity 0.1s ease, border-color 0.1s ease, background 0.1s ease;
       will-change: transform;
     }
 
     /* Hover state — cursor expands and fills */
     body.cursor-hover #cursor-dot {
+      transition: transform 0.05s linear;
       width: 6px; height: 6px;
       opacity: 0.6;
     }
     body.cursor-hover #cursor-ring {
+      transition: transform 0.06s linear;
       width: 44px; height: 44px;
       opacity: 0.2;
       background: var(--red);
@@ -73,33 +77,35 @@
 
     /* Click state */
     body.cursor-click #cursor-dot {
+      transition: transform 0.05s linear;
       width: 12px; height: 12px;
       background: var(--red);
     }
     body.cursor-click #cursor-ring {
+      transition: transform 0.06s linear;
       width: 22px; height: 22px;
       opacity: 0.6;
     }
 
     /* ── Dark mode ── */
     [data-theme="dark"] {
-      --cream:    #0b0f17;
-      --cream2:   #111827;
-      --white:    #141c2b;
-      --ink:      #f3f4f6;
-      --ink2:     #9ca3af;
-      --ink3:     #6b7280;
-      --red:      #ff5c5c;
-      --red-soft: rgba(255,92,92,0.12);
-      --red-mid:  rgba(255,92,92,0.25);
-      --amber:    #f59e0b;
-      --amber-s:  rgba(245,158,11,0.12);
-      --green:    #22c55e;
-      --green-s:  rgba(34,197,94,0.12);
-      --border:   rgba(255,255,255,0.06);
-      --border2:  rgba(255,255,255,0.03);
-      --shadow:   0 4px 30px rgba(0,0,0,0.6);
-      --shadow2:  0 12px 60px rgba(0,0,0,0.8);
+      --cream:    #0f1117;
+      --cream2:   #161b26;
+      --white:    #1a2030;
+      --ink:      #e8e2d9;
+      --ink2:     #8a9ab0;
+      --ink3:     #4a5568;
+      --red:      #e05c4b;
+      --red-soft: rgba(224,92,75,0.12);
+      --red-mid:  rgba(224,92,75,0.25);
+      --amber:    #e8a047;
+      --amber-s:  rgba(232,160,71,0.1);
+      --green:    #4caf82;
+      --green-s:  rgba(76,175,130,0.1);
+      --border:   rgba(232,226,217,0.08);
+      --border2:  rgba(232,226,217,0.04);
+      --shadow:   0 2px 20px rgba(0,0,0,0.3);
+      --shadow2:  0 8px 40px rgba(0,0,0,0.5);
     }
 
     /* ── Ripple overlay ── */
@@ -614,7 +620,8 @@
 
     @media (max-width: 768px) {
       /* Hide cursor on touch */
-      #cursor-dot, #cursor-ring { display: none !important; }
+      #cursor-dot, #cursor-ring {
+      transition: transform 0.06s linear; display: none !important; }
       * { cursor: auto !important; }
 
       /* Show mobile UI */
@@ -1052,7 +1059,7 @@
 
             </div>
             <div style="display:flex;gap:10px;margin-top:1.5rem;justify-content:flex-end;align-items:center;">
-              <button class="btn btn-secondary" onclick="fillSample()">Fill Sample Data</button>
+              
               <button class="btn btn-primary" id="analyzeBtn" onclick="runAnalysis()">
                 <div class="spinner" id="spinner"></div>
                 <span id="btnText">Run AI Diagnosis</span>
@@ -1212,7 +1219,7 @@
       <div class="page-head fade-up">
         <div class="page-head-eyebrow">Records</div>
         <h1>Patient <em>History</em> </h1>
-        <p>All diagnostic records from this session. (No records yet — run a diagnosis to populate.)</p>
+        <p>${recentPatients.length === 0 ? 'All diagnostic records from this session. (No records yet — run a diagnosis to populate.)' : ''}</p>
       </div>
       <div class="card fade-up-2">
         <div class="card-head">
